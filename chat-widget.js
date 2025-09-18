@@ -297,7 +297,7 @@
             responseTimeText: '',
             poweredBy: {
                 text: 'Powered by Sedicom',
-                link: 'https://sedicom.es/agentes-ia'
+                link: 'https://sedicom.es/agente-de-ia-para-faqs-gratis'
             }
         },
         style: {
