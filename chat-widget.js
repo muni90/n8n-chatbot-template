@@ -162,18 +162,18 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
         .n8n-chat-widget .chat-message.bot a {
-            display: inline-block;
-            background: var(--chat--color-primary);
-            color: white;
-            padding: 10px 16px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-size: 14px;
-            margin: 4px;
-            transition: background 0.2s;
+            display: inline;
+            background: none;
+            color: var(--chat--color-primary);
+            text-decoration: underline;
+            padding: 0;
+            border-radius: 0;
+            font-size: inherit;
+            margin: 0;
         }
         .n8n-chat-widget .chat-message.bot a:hover {
-            background: var(--chat--color-secondary);
+            text-decoration: none;
+            color: var(--chat--color-secondary);
         }
         .n8n-chat-widget .chat-input {
             padding: 16px;
@@ -362,6 +362,28 @@
     const messagesContainer = chatContainer.querySelector('.chat-messages');
     const textarea = chatContainer.querySelector('textarea');
     const sendButton = chatContainer.querySelector('button[type="submit"]');
+    
+    // Fase 2: Implementación - Función para procesar mensajes del bot
+    function processBotMessage(output) {
+        let html = Array.isArray(output) ? output[0].output : output.output || output;
+        
+        // Si no parece contener HTML (sin etiquetas <), trata como texto plano y parsea URLs
+        if (!/<[a-z]/i.test(html)) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            html = html.replace(urlRegex, function(url) {
+                // Escapar caracteres peligrosos en href para prevenir inyección
+                const cleanUrl = url.replace(/["']/g, '');
+                return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>`;
+            });
+        }
+        
+        // Sanitizar con DOMPurify (permitiendo solo etiquetas y atributos seguros)
+        return window.DOMPurify ? DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['a', 'strong', 'em', 'p', 'div'],
+            ALLOWED_ATTR: ['href', 'target', 'rel']
+        }) : html;
+    }
+    
     function generateUUID() {
         return crypto.randomUUID();
     }
@@ -385,13 +407,7 @@
             chatInterface.classList.add('active');
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'chat-message bot';
-            // Use innerHTML with sanitization
-            botMessageDiv.innerHTML = window.DOMPurify
-                ? DOMPurify.sanitize(Array.isArray(responseData) ? responseData[0].output : responseData.output, {
-                      ALLOWED_TAGS: ['a', 'strong', 'em', 'p', 'div'],
-                      ALLOWED_ATTR: ['href', 'style', 'target', 'onmouseover', 'onmouseout']
-                  })
-                : Array.isArray(responseData) ? responseData[0].output : responseData.output;
+            botMessageDiv.innerHTML = processBotMessage(responseData);
             messagesContainer.appendChild(botMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
@@ -420,13 +436,7 @@
             const data = await response.json();
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'chat-message bot';
-            // Use innerHTML with sanitization
-            botMessageDiv.innerHTML = window.DOMPurify
-                ? DOMPurify.sanitize(Array.isArray(data) ? data[0].output : data.output, {
-                      ALLOWED_TAGS: ['a', 'strong', 'em', 'p', 'div'],
-                      ALLOWED_ATTR: ['href', 'style', 'target', 'onmouseover', 'onmouseout']
-                  })
-                : Array.isArray(data) ? data[0].output : data.output;
+            botMessageDiv.innerHTML = processBotMessage(data);
             messagesContainer.appendChild(botMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
